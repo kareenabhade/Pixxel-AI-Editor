@@ -13,8 +13,8 @@ interface FeatureCardProps {
 const FeatureCard = ({icon, title, description, delay=0 }:FeatureCardProps)=>{
    const {ref, isVisible} = useIntersectionObserver();
    const [isHovered, setIsHovered] = useState(false);
-   console.log("isVisible", isVisible)
-   console.log("ref", ref)
+  //  console.log("isVisible", isVisible)
+  //  console.log("ref", ref)
 
    return ( 
     <div ref={ref}

@@ -4,8 +4,12 @@ import Link from "next/link";
 import HeroSection from "@/components/hero";
 import FeaturesSection from "@/components/features";
 import Pricing from "@/components/pricing";
+import { internal } from "../convex/_generated/api";
 
 export default function Home() {
+
+      console.log("internal : ", internal)
+  
   const stats = [
     {label:"Image processed", value:10000, suffix:"+"},
     {label:"Active Users", value:500, suffix:"+"},

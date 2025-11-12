@@ -6,7 +6,7 @@ import { title } from "process";
 export default defineSchema({
   users: defineTable({
     name: v.string(),
-    email: v.string() ?? "",
+    email: v.string(),
     tokenIdentifier: v.string(),
     imageUrl: v.optional(v.string()),
 
@@ -22,7 +22,7 @@ export default defineSchema({
 
   }).index("by_token",["tokenIdentifier"],)
     .index("by_email",["email"])
-    .searchIndex("searxh_name",{searchField:"name"})
+    .searchIndex("search_name",{searchField:"name"})
     .searchIndex("search_email", {searchField:"email"}),
 
   
@@ -57,7 +57,7 @@ export default defineSchema({
     .index("by_folder", ["folderId"]),
 
 
-    folder: defineTable({
+    folders: defineTable({
       name:v.string(),
       userId: v.id("users"),
       createdAt: v.number(),

@@ -8,12 +8,12 @@ import { Id } from "../convex/_generated/dataModel";
 export function useStoreUser() {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const { user } = useUser();
-  console.log("User --", user)
+  // console.log("User --", user)
   // When this state is set we know the server
   // has stored the user.
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
-  console.log("api", api);
-  console.log("user ID ", userId);
+  // console.log("api", api);
+  // console.log("user ID ", userId);
   const storeUser = useMutation(api.users.store);
 
   // Call the `storeUser` mutation function to store
