@@ -42,7 +42,7 @@ const NewProjectModal = ({isOpen, onClose}: newProjectModalPrps) => {
         onClose();
     }
 
-    const handleCreateProject = async()=>{
+   const handleCreateProject = async()=>{
       if(!canCreate){
           setShowUpgadeModal(true);
           return;
@@ -50,6 +50,7 @@ const NewProjectModal = ({isOpen, onClose}: newProjectModalPrps) => {
 
       if(!selectedFile || !projectTitle.trim()){
         toast.error("Please select an image and enter a project title");
+        return;
       }
 
       setIsUploading(true);
@@ -80,12 +81,16 @@ const NewProjectModal = ({isOpen, onClose}: newProjectModalPrps) => {
 
         toast.success("Project created successfully!");
         router.push(`/editor/${projectId}`);
-      } catch(error){
-        console.error("Error creating project :", error);
-        toast.error(
-          error?.message || "Failed to create project. Please try again."
-        ); 
-      }finally{
+      } catch (error: unknown) {
+  console.error("Error creating project:", error);
+
+  if (error instanceof Error) {
+    toast.error(error.message);
+  } else {
+    toast.error("Failed to create project. Please try again.");
+  }
+}
+finally{
         setIsUploading(false);
       }
     };
@@ -173,11 +178,14 @@ const NewProjectModal = ({isOpen, onClose}: newProjectModalPrps) => {
     </div>
     : <div>
       <div className="relative space-y-3 ">
-        <img 
-           src={previewUrl}
-           alt="Preview"
-           className="w-full h-64 object-cover rounded-xl border border-white/10"
-         />
+       {previewUrl && (
+          <img 
+            src={previewUrl}
+            alt="Preview"
+            className="w-full h-64 object-cover rounded-xl border border-white/10"
+          />
+        )}
+        
          <Button
              variant="ghost"
              size="icon"

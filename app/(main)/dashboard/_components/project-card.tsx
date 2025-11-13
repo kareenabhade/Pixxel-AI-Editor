@@ -9,12 +9,14 @@ import { api } from "@/convex/_generated/api";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Id } from "@/convex/_generated/dataModel";
+
 
 interface ProjectCardProps {
   project: {
-    _id: string;
+    _id: Id<"projects">;
     title: string;
-    currentImageUrl: string;
+    currentImageUrl?: string;
     createdAt: number;
     updatedAt: number;
     width?: number;

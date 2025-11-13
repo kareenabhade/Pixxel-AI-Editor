@@ -21,16 +21,19 @@ interface UpgradeModalProps {
 
 const UpgradeModal = ({isOpen, onClose, restrictedTool, reason}: UpgradeModalProps) => {
 
-    const getToolName = (toolId: string)=>{
-        const toolNames = {
-            background: "AI Background Tools",
-            ai_extender: "AI Image Extender",
-            ai_edit: "AI Editor",
-            projects: "More than 3 projects"
-        };
+    type ToolId = "background" | "ai_extender" | "ai_edit" | "projects" | string;
 
-        return toolNames[toolId] || "Premium Feature";
-    }
+    const getToolName = (toolId: ToolId): string => {
+      const toolNames: Record<string, string> = {
+        background: "AI Background Tools",
+        ai_extender: "AI Image Extender",
+        ai_edit: "AI Editor",
+        projects: "More than 3 projects",
+      };
+    
+      return toolNames[toolId] ?? "Premium Feature";
+    };
+
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -74,7 +77,7 @@ const UpgradeModal = ({isOpen, onClose, restrictedTool, reason}: UpgradeModalPro
       <DialogFooter className="justify-center">
         <Button
             variant="ghost"
-            onClick={onClose}
+            onClick={()=>{onClose(false)}}
             className="text-white/70 hover:text-white"
         >
             Maybe Later
