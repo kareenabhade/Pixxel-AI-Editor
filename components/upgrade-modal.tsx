@@ -15,8 +15,8 @@ import { Button } from "./ui/button"
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: (open: boolean) => void;
-  restrictedTool: string;
-  reason: string;
+  restrictedTool: string | null;
+  reason: string | undefined;
 }
 
 const UpgradeModal = ({isOpen, onClose, restrictedTool, reason}: UpgradeModalProps) => {

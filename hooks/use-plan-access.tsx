@@ -1,52 +1,63 @@
-import { useAuth } from "@clerk/nextjs"
+import { useAuth } from "@clerk/nextjs";
+
+export type ToolId =
+  | "resize"
+  | "crop"
+  | "adjust"
+  | "text"
+  | "background"
+  | "ai_extender"
+  | "ai_edit"
+  | "export";
 
 export const usePlanAccess = () => {
-    const {has} = useAuth();
+  const { has } = useAuth();
 
-    const isPro = has?.({plan:"pro"}) || false;
-    const isFree = !isPro;
+  const isPro = has?.({ plan: "pro" }) || false;
+  const isFree = !isPro;
 
-    const planAccess = {
-        // Free plan tools
-        resize: true,
-        crop: true,
-        adjust: true,
-        text: true,
+  // Define tool access map with types
+  const planAccess: Record<ToolId, boolean> = {
+    resize: true,
+    crop: true,
+    adjust: true,
+    text: true,
 
-        // Pro-only tools
-        background: isPro,
-        ai_extender: isPro,
-        ai_edit: isPro,
-    }
+    background: isPro,
+    ai_extender: isPro,
+    ai_edit: isPro,
+    export: isPro,
+  };
 
-    const hasAccess = (toolId:string)=>{
+  /** ✔ PROPERLY TYPED: returns boolean */
+  const hasAccess = (toolId: ToolId): boolean => {
+    return planAccess[toolId] === true;
+  };
 
-    }
+  const getRestrictedTools = (): ToolId[] => {
+    return Object.entries(planAccess)
+      .filter(([_, canUse]) => !canUse)
+      .map(([toolId]) => toolId as ToolId);
+  };
 
-    const getRestrictedTools = ()=>{
-        return Object.entries(planAccess)
-            .filter(([_, hasAccess])=>!hasAccess)
-            .map(([toolId])=>toolId);
-    }
+  const canCreateProject = (currentProjectCount: number): boolean => {
+    if (isPro) return true;
+    return currentProjectCount < 3;
+  };
 
-    const canCreateProject = (currentProjectCount:number)=>{
-        if(isPro) return true;
-        return currentProjectCount<3; // free limit
-    }
-
-     const canExport = (currentExportThisMonth:number)=>{
-        if(isPro) return true;
-        return currentExportThisMonth<20; // free limit
-    }
+  const canExport = (currentExportThisMonth: number): boolean => {
+    if (isPro) return true;
+    return currentExportThisMonth < 20;
+  };
 
   return {
-    userPlan: isPro?"pro": "free_user",
+    userPlan: isPro ? "pro" : "free_user",
     isPro,
     isFree,
-    hasAccess,
+    hasAccess,        // ✔ now correctly typed
     planAccess,
     getRestrictedTools,
     canCreateProject,
     canExport,
-  }
-}
+  };
+};
