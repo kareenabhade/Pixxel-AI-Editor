@@ -13,6 +13,7 @@ import { useCanvas } from "@/Context/context";
 import { CropContent } from "./_tools/crop";
 import { ResizeControls } from "./_tools/resize";
 import { AdjustControls } from "./_tools/adjust";
+import BackgroundControls from "./_tools/ai-background";
 
 interface CanvasProps {
   project: {
@@ -119,6 +120,9 @@ function renderToolContent(activeTool: ToolId | null, project: CanvasProps["proj
 
     case "adjust":
       return <AdjustControls />;
+    
+    case "background":
+      return <BackgroundControls project={project} currentImageUrl={undefined} originalImageUrl={undefined}/>
 
     default:
       return <div className="text-white">Select a tool to get started</div>;

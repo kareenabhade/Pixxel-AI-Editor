@@ -15,10 +15,6 @@ import {
 import { useCanvas } from "@/Context/context";
 import { FabricImage, Rect, FabricObject } from "fabric";
 
-// =======================
-// TYPES
-// =======================
-
 // Aspect ratio button type
 interface AspectRatioOption {
   label: string;
@@ -49,9 +45,6 @@ interface CropRect extends Rect {
   isCropRectangle?: boolean;
 }
 
-// =======================
-// CONSTANTS
-// =======================
 
 const ASPECT_RATIOS: AspectRatioOption[] = [
   { label: "Freeform", value: null, icon: Maximize },
@@ -66,9 +59,6 @@ const ASPECT_RATIOS: AspectRatioOption[] = [
   { label: "Story", value: 9 / 16, icon: Smartphone, ratio: "9:16" },
 ];
 
-// =======================
-// MAIN COMPONENT
-// =======================
 
 export function CropContent(): JSX.Element {
   const { canvasEditor, activeTool } = useCanvas();
@@ -79,9 +69,7 @@ export function CropContent(): JSX.Element {
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [originalProps, setOriginalProps] = useState<OriginalImageProps | null>(null);
 
-  // ======================
-  // Fabric Helpers
-  // ======================
+
 
   const getActiveImage = (): ImageWithProps | null => {
     if (!canvasEditor) return null;
@@ -110,9 +98,7 @@ export function CropContent(): JSX.Element {
     canvasEditor.requestRenderAll();
   };
 
-  // ======================
   // Crop Mode Controls
-  // ======================
 
   const initializeCropMode = (image: ImageWithProps): void => {
     if (!canvasEditor || isCropMode) return;
