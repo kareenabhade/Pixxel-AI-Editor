@@ -28,7 +28,7 @@ const CanvasEditor = ({ project }: CanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<Canvas | null>(null); // <-- single source of truth
 
-  const { canvasEditor, setCanvasEditor, activeTool } = useCanvas();
+  const { canvasEditor, setCanvasEditor, activeTool, onToolChange } = useCanvas();
   const { mutate: updateProject } = useConvexMutation(api.projects.updateProject);
 
   /** VIEWPORT SCALE */
@@ -232,6 +232,26 @@ const CanvasEditor = ({ project }: CanvasProps) => {
         canvasEditor.hoverCursor = "move";
     }
   }, [canvasEditor, activeTool]);
+
+  useEffect(()=>{
+     if(!canvasEditor || !onToolChange) return;
+
+     const handleSelection = (e:any)=>{
+      const selectedObject = e.selected?.[0];
+
+      if(selectedObject && selectedObject.type === "i-text"){
+        onToolChange("text");
+      }
+     };
+
+     canvasEditor.on("selection:created", handleSelection);
+     canvasEditor.on("selection:updated", handleSelection);
+
+     return ()=>{
+      canvasEditor.off("selection:created", handleSelection);
+      canvasEditor.off("selection:updated", handleSelection);
+     }
+  },[canvasEditor, onToolChange])
 
   /** JSX */
   return (
