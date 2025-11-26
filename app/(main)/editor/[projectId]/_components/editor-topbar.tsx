@@ -28,11 +28,18 @@ import { useCanvas } from "@/Context/context";
 import { Button } from "@/components/ui/button";
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import UpgradeModal from "@/components/upgrade-modal";
-import { useConvexMutation } from "@/hooks/use-convex-query";
+import { useConvexMutation, useConvexQuery } from "@/hooks/use-convex-query";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
-import { FabricImage } from "fabric";
-
+import { FabricImage, TMat2D } from "fabric";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface CanvasProps {
   project: {
@@ -136,7 +143,13 @@ const EditorTopbar = ({project}:CanvasProps) => {
 
     const {activeTool, onToolChange, canvasEditor} = useCanvas();
     const {hasAccess, canExport, isFree} = usePlanAccess();
+    
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportFormat, setExportFormat] = useState(null);
+
     const {mutate: updateProject, isLoading: isSaving} = useConvexMutation(api.projects.updateProject)
+
+    const {data:user} = useConvexQuery(api.users.getCurrentUser);
 
     const handleBackToDashboard = ()=>{
         router.push("/dashboard");
@@ -209,6 +222,87 @@ const EditorTopbar = ({project}:CanvasProps) => {
         }
    }
 
+  const handleManualSave = async()=>{
+    try {
+      await updateProject({
+        projectId : project._id,
+        canvasState: canvasEditor?.toJSON(),
+      })
+
+      toast.success("Project saved successfully!");
+    } catch (error) {
+      console.error("Error saving project:", error);
+      toast.error("Failed to save project. Please try again.");
+    }
+  }
+
+const handleExport = async (exportConfig: any) => {
+  if (!canvasEditor || !project) {
+    toast.error("Canvas not ready for export");
+    return;
+  }
+
+  if (!canExport(user?.exportsThisMonth || 0)) {
+    setRestrictedTool("export");
+    setShowUpgradeModal(true);
+    return;
+  }
+
+  setIsExporting(true);
+  setExportFormat(exportConfig.format);
+
+  try {
+    // Store current canvas state
+    const currentZoom = canvasEditor.getZoom();
+
+    // ⭐ FIX: Safe cloning of viewport transform
+    const currentViewportTransform: TMat2D = canvasEditor.viewportTransform
+      ? ([...canvasEditor.viewportTransform] as TMat2D)
+      : [1, 0, 0, 1, 0, 0];
+
+    // Reset for export
+    canvasEditor.setZoom(1);
+    canvasEditor.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    canvasEditor.setDimensions({
+      width: project.width,
+      height: project.height,
+    });
+    canvasEditor.requestRenderAll();
+
+    const dataURL = canvasEditor.toDataURL({
+      format: exportConfig.format.toLowerCase(),
+      quality: exportConfig.quality,
+      multiplier: 1,
+    });
+
+    // Restore original view
+    canvasEditor.setZoom(currentZoom);
+    canvasEditor.setViewportTransform(currentViewportTransform);
+    canvasEditor.setDimensions({
+      width: project.width * currentZoom,
+      height: project.height * currentZoom,
+    });
+    canvasEditor.requestRenderAll();
+
+    // Download
+    const link = document.createElement("a");
+    link.download = `${project.title}.${exportConfig.extension}`;
+    link.href = dataURL;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`Image exported as ${exportConfig.format}!`);
+  } catch (error) {
+    console.error("Error exporting image:", error);
+    toast.error("Failed to export image. Please try again.");
+  } finally {
+    setIsExporting(false);
+    setExportFormat(null);
+  }
+};
+
+
   return (
     <>
      <div className="border-b px-6 py-3 ">
@@ -226,7 +320,7 @@ const EditorTopbar = ({project}:CanvasProps) => {
             <h1 className="font-extrabold capitalize">{project.title}</h1>
 
 
-            <div className="fleex items-center gap-3">
+            <div className="flex items-center gap-3">
               <Button 
                   variant="outline"
                   size="sm"
@@ -237,6 +331,93 @@ const EditorTopbar = ({project}:CanvasProps) => {
                 <RefreshCcw className="h-4 w-4"/>
                 Reset
               </Button>
+
+
+              <Button
+                 variant="primary"
+                 size="sm"
+                 onClick={handleManualSave}
+                 disabled={isSaving || !canvasEditor}
+                 className="gap-2"
+              >
+                {
+                  isSaving ? (
+                    <>
+                    <Loader2 className="h-4 w-4 animate-spin"/>
+                    Saving...
+                    </>
+                  ):(
+                    <>
+                    <Save className="h-4 w-4"/>
+                    Save
+                    </>
+                  )
+                }
+              </Button>
+
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                      variant="glass"
+                      size="sm"
+                      disabled={isExporting || !canvasEditor}
+                      className="gap-2"
+                  >
+                    {isExporting ? (
+                      <>
+                      <Loader2 className="h-4 w-4 animate-spin"/>
+                      Exporting {exportFormat}
+                      </>
+                    ):(
+                      <>
+                      <Download className="h-4 w-4"/>
+                      Export 
+                      <ChevronDown className="h-4 w-4"/>
+                      </>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                      align="end"
+                      className="w-56 bg-slate-800 border-slate-700"
+                >
+                  <DropdownMenuLabel className="px-3 py-2 text-sm text-white/70">
+                    Export Resolution: {project.width} x {project.height}px
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-slate-700" />
+                  {
+                    EXPORT_FORMATS.map((config, index)=>(
+                      <DropdownMenuItem
+                          key={index}
+                          onClick={()=>handleExport(config)}
+                          className="text-white hover:bg-slate-700 cursor-pointer flex items-center gap-2"
+                      >
+                        <FileImage className="h-4 w-4"/>
+                        <div className="flex-1">
+                          <div className="font-medium">{config.label}</div>
+                          <div className="text-xs text-white/50">
+                            {config.format}.{Math.round(config.quality*100)}%
+                            quality
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))
+                  }
+
+                 {isFree &&
+                 <div className="px-3 py-2 text-xs text-white/50">
+                  <DropdownMenuSeparator className="bg-slate-700"/>
+                    Free Plan : {user?.exportsThisMonth || 0 }/20 exports this month
+                    {(user?.exportsThisMonth || 0) >= 20 && (
+                      <div className="text-amber-400 mt-1">
+                        Upgrade to Pro for unlimited exports
+                      </div>
+                    )}
+                  </div>
+                  }
+                </DropdownMenuContent>
+              </DropdownMenu>
 
             </div>
         </div>
