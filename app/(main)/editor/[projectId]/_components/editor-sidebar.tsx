@@ -16,6 +16,7 @@ import { AdjustControls } from "./_tools/adjust";
 import BackgroundControls from "./_tools/ai-background";
 import TextControls from "./_tools/text";
 import AIExtendControls from "./_tools/ai-extend";
+import { AIEdit } from "./_tools/ai-edit";
 
 interface CanvasProps {
   project: {
@@ -131,6 +132,8 @@ function renderToolContent(activeTool: ToolId | null, project: CanvasProps["proj
 
     case "ai_extender":
       return <AIExtendControls  project={project} currentImageUrl={undefined} originalImageUrl={undefined}/>
+    case "ai_edit":
+      return <AIEdit project={project} />
 
     default:
       return <div className="text-white">Select a tool to get started</div>;
