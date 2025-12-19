@@ -2,56 +2,47 @@ import { auth } from "@clerk/nextjs/server";
 import ImageKit from "imagekit";
 import { NextResponse } from "next/server";
 
-/* -------------------------------------
-   ENV VALIDATION (STRICT)
-------------------------------------- */
+function getImageKit() {
+  const {
+    NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
+    IMAGEKIT_PRIVATE_KEY,
+    NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT,
+  } = process.env;
 
-const {
-  NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
-  IMAGEKIT_PRIVATE_KEY,
-  NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT,
-} = process.env;
+  if (
+    !NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY ||
+    !IMAGEKIT_PRIVATE_KEY ||
+    !NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+  ) {
+    return null;
+  }
 
-if (
-  !NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY ||
-  !IMAGEKIT_PRIVATE_KEY ||
-  !NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
-) {
-  throw new Error(
-    "Missing ImageKit environment variables. Check your .env file."
-  );
+  return new ImageKit({
+    publicKey: NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
+    privateKey: IMAGEKIT_PRIVATE_KEY,
+    urlEndpoint: NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT,
+  });
 }
-
-/* -------------------------------------
-   IMAGEKIT INSTANCE
-------------------------------------- */
-
-const imagekit = new ImageKit({
-  publicKey: NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY,
-  privateKey: IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT,
-});
-
-/* -------------------------------------
-   API HANDLER
-------------------------------------- */
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
+    const imagekit = getImageKit();
+    if (!imagekit) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: "ImageKit environment variables not configured" },
+        { status: 500 }
       );
+    }
+
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await request.formData();
     const file = formData.get("file");
     const fileName = formData.get("fileName");
 
-    // ✅ Type guard
     if (!(file instanceof File)) {
       return NextResponse.json(
         { error: "No file provided" },
@@ -91,7 +82,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       url: uploadResponse.url,
-      thumbnailUrl, // ✅ typo fixed
+      thumbnailUrl,
       fileId: uploadResponse.fileId,
       width: uploadResponse.width,
       height: uploadResponse.height,
