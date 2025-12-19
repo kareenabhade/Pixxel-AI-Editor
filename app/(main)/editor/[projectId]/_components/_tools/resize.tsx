@@ -23,67 +23,61 @@ interface CanvasProps {
   };
 }
 
-interface AspectPreset {
-  name: string | null;
-  ratio: [number, number];
-  label?: string; // optional, since you don't use it here
-}
+type AspectRatioPreset = {
+  name: string;
+  label: string;
+  ratio: [number, number]; // ✅ tuple
+};
 
-
-// Common aspect ratios
-const ASPECT_RATIOS = [
-  { name: "Instagram Story", ratio: [9, 16], label: "9:16" },
-  { name: "Instagram Post", ratio: [1, 1], label: "1:1" },
-  { name: "Youtube Thumbnail", ratio: [16, 9], label: "16:9" },
-  { name: "Portrait", ratio: [2, 3], label: "2:3" },
-  { name: "Facebook Cover", ratio: [851, 315], label: "2.7:1" },
-  { name: "Twitter Header", ratio: [3, 1], label: "3:1" },
+const ASPECT_RATIOS: AspectRatioPreset[] = [
+  { name: "Square", label: "1:1", ratio: [1, 1] },
+  { name: "Landscape", label: "16:9", ratio: [16, 9] },
+  { name: "Portrait", label: "9:16", ratio: [9, 16] },
+  { name: "Classic", label: "4:3", ratio: [4, 3] },
 ];
 
-export function ResizeControls({ project }:CanvasProps) {
+export function ResizeControls({ project }: CanvasProps) {
   const { canvasEditor, processingMessage, setProcessingMessage } = useCanvas();
-  const [newWidth, setNewWidth] = useState(project?.width || 800);
-  const [newHeight, setNewHeight] = useState(project?.height || 600);
+
+  const [newWidth, setNewWidth] = useState(project.width);
+  const [newHeight, setNewHeight] = useState(project.height);
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
-  const {
-    mutate: updateProject,
-    data,
-    isLoading,
-  } = useConvexMutation(api.projects.updateProject);
+  const { mutate: updateProject, data, isLoading } =
+    useConvexMutation(api.projects.updateProject);
 
-  // ✅ FIXED useEffect syntax
   useEffect(() => {
     if (!isLoading && data) {
       window.location.reload();
     }
   }, [data, isLoading]);
 
-  // Calculate dimensions for preset aspect ratio
- const calculateAspectRatioDimensions = (ratio: [number, number]): { width: number; height: number } => {
-  if (!project) return { width: 800, height: 600 };
+  /* ---------------- Aspect Ratio Calculation ---------------- */
 
-  const [ratioW, ratioH] = ratio;
-  const area = project.width * project.height;
-  const aspectRatio = ratioW / ratioH;
+  const calculateAspectRatioDimensions = (
+    ratio: [number, number]
+  ): { width: number; height: number } => {
+    const [rw, rh] = ratio;
+    const area = project.width * project.height;
+    const aspect = rw / rh;
 
-  const height = Math.sqrt(area / aspectRatio);
-  const width = height * aspectRatio;
+    const height = Math.sqrt(area / aspect);
+    const width = height * aspect;
 
-  return {
-    width: Math.round(width),
-    height: Math.round(height),
+    return {
+      width: Math.round(width),
+      height: Math.round(height),
+    };
   };
-};
 
+  /* ---------------- Input Handlers ---------------- */
 
-  // Handle width change
   const handleWidthChange = (value: string) => {
     const width = parseInt(value) || 0;
     setNewWidth(width);
 
-    if (lockAspectRatio && project) {
+    if (lockAspectRatio) {
       const ratio = project.height / project.width;
       setNewHeight(Math.round(width * ratio));
     }
@@ -91,12 +85,11 @@ export function ResizeControls({ project }:CanvasProps) {
     setSelectedPreset(null);
   };
 
-  // Handle height change
   const handleHeightChange = (value: string) => {
     const height = parseInt(value) || 0;
     setNewHeight(height);
 
-    if (lockAspectRatio && project) {
+    if (lockAspectRatio) {
       const ratio = project.width / project.height;
       setNewWidth(Math.round(height * ratio));
     }
@@ -104,36 +97,33 @@ export function ResizeControls({ project }:CanvasProps) {
     setSelectedPreset(null);
   };
 
-  // Apply preset
- const applyAspectRatio = (preset: AspectPreset): void => {
-  const dim = calculateAspectRatioDimensions(preset.ratio);
-  setNewWidth(dim.width);
-  setNewHeight(dim.height);
-  setSelectedPreset(preset.name);
-};
+  /* ---------------- Apply Preset ---------------- */
 
+  const applyAspectRatio = (preset: AspectRatioPreset): void => {
+    const dim = calculateAspectRatioDimensions(preset.ratio);
+    setNewWidth(dim.width);
+    setNewHeight(dim.height);
+    setSelectedPreset(preset.name);
+  };
 
-  // Viewport scale calculation
- const calculateViewportScale = (): number => {
-  if (!canvasEditor) return 1;
+  /* ---------------- Viewport Scale ---------------- */
 
-  const parent = canvasEditor.getElement()?.parentNode;
+  const calculateViewportScale = (): number => {
+    if (!canvasEditor) return 1;
 
-  if (!parent || !(parent instanceof HTMLElement)) return 1;
+    const parent = canvasEditor.getElement()?.parentNode;
+    if (!(parent instanceof HTMLElement)) return 1;
 
-  const cW = parent.clientWidth - 40;
-  const cH = parent.clientHeight - 40;
+    const cW = parent.clientWidth - 40;
+    const cH = parent.clientHeight - 40;
 
-  const scaleX = cW / newWidth;
-  const scaleY = cH / newHeight;
+    return Math.min(cW / newWidth, cH / newHeight, 1);
+  };
 
-  return Math.min(scaleX, scaleY, 1);
-};
+  /* ---------------- Apply Resize ---------------- */
 
-
-  // Apply resize to canvas
   const handleApplyResize = async () => {
-    if (!canvasEditor || !project) return;
+    if (!canvasEditor) return;
     if (newWidth === project.width && newHeight === project.height) return;
 
     setProcessingMessage("Resizing canvas...");
@@ -142,17 +132,14 @@ export function ResizeControls({ project }:CanvasProps) {
       canvasEditor.setWidth(newWidth);
       canvasEditor.setHeight(newHeight);
 
-      const viewportScale = calculateViewportScale();
+      const scale = calculateViewportScale();
 
       canvasEditor.setDimensions(
-        {
-          width: newWidth * viewportScale,
-          height: newHeight * viewportScale,
-        },
+        { width: newWidth * scale, height: newHeight * scale },
         { backstoreOnly: false }
       );
 
-      canvasEditor.setZoom(viewportScale);
+      canvasEditor.setZoom(scale);
       canvasEditor.calcOffset();
       canvasEditor.requestRenderAll();
 
@@ -170,7 +157,7 @@ export function ResizeControls({ project }:CanvasProps) {
     }
   };
 
-  if (!canvasEditor || !project) {
+  if (!canvasEditor) {
     return (
       <div className="p-4">
         <p className="text-white/70 text-sm">Canvas not ready</p>
@@ -195,103 +182,58 @@ export function ResizeControls({ project }:CanvasProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-medium text-white">Custom Size</h3>
-
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLockAspectRatio(!lockAspectRatio)}
-            className="text-white/70 hover:text-white p-1"
           >
-            {lockAspectRatio ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            {lockAspectRatio ? <Lock /> : <Unlock />}
           </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-white/70 mb-1 block">Width</label>
-            <Input
-              type="number"
-              value={newWidth}
-              onChange={(e) => handleWidthChange(e.target.value)}
-              min="100"
-              max="5000"
-              className="bg-slate-700 border-white/20 text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-white/70 mb-1 block">Height</label>
-            <Input
-              type="number"
-              value={newHeight}
-              onChange={(e) => handleHeightChange(e.target.value)}
-              min="100"
-              max="5000"
-              className="bg-slate-700 border-white/20 text-white"
-            />
-          </div>
-        </div>
-
-        <div className="text-xs text-white/70">
-          {lockAspectRatio ? "Aspect ratio locked" : "Free resize"}
+          <Input
+            type="number"
+            value={newWidth}
+            onChange={(e) => handleWidthChange(e.target.value)}
+          />
+          <Input
+            type="number"
+            value={newHeight}
+            onChange={(e) => handleHeightChange(e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Aspect Ratio Presets */}
+      {/* Aspect Presets */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-white">Aspect Ratios</h3>
-        <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-          {ASPECT_RATIOS.map((ratio) => {
-            const dimensions = calculateAspectRatioDimensions(ratio.ratio);
-            return (
-              <Button
-                key={ratio.name}
-                variant={selectedPreset === ratio.name ? "default" : "outline"}
-                size="sm"
-                onClick={() => applyAspectRatio(ratio)}
-                className={`justify-between h-auto py-2 ${
-                  selectedPreset === ratio.name
-                    ? "bg-cyan-500 hover:bg-cyan-600"
-                    : ""
-                }`}
-              >
-                <div>
-                  <div className="font-medium">{ratio.name}</div>
-                  <div className="text-xs opacity-70">
-                    {dimensions.width} × {dimensions.height} ({ratio.label})
-                  </div>
+        {ASPECT_RATIOS.map((ratio) => {
+          const dim = calculateAspectRatioDimensions(ratio.ratio);
+          return (
+            <Button
+              key={ratio.name}
+              variant={selectedPreset === ratio.name ? "default" : "outline"}
+              onClick={() => applyAspectRatio(ratio)}
+              className="justify-between"
+            >
+              <div>
+                <div>{ratio.name}</div>
+                <div className="text-xs opacity-70">
+                  {dim.width} × {dim.height} ({ratio.label})
                 </div>
-                <Monitor className="h-4 w-4" />
-              </Button>
-            );
-          })}
-        </div>
+              </div>
+              <Monitor />
+            </Button>
+          );
+        })}
       </div>
-
-      {/* Preview */}
-      {hasChanges && (
-        <div className="bg-slate-700/30 rounded-lg p-3">
-          <h4 className="text-sm font-medium text-white mb-2">New Size Preview</h4>
-          <div className="text-xs text-white/70">
-            <div>
-              New Canvas: {newWidth} × {newHeight} pixels
-            </div>
-            <div className="text-cyan-400">
-              {newWidth > project.width || newHeight > project.height
-                ? "Canvas will be expanded"
-                : "Canvas will be cropped"}
-            </div>
-          </div>
-        </div>
-      )}
 
       <Button
         onClick={handleApplyResize}
-        disabled={!hasChanges || processingMessage}
+        disabled={!hasChanges || Boolean(processingMessage)}
         className="w-full"
       >
-        <Expand className="h-4 w-4 mr-2" />
-        Apply Resize
+        <Expand className="mr-2" /> Apply Resize
       </Button>
     </div>
   );

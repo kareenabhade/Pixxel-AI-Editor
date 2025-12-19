@@ -157,19 +157,17 @@ export function CropContent(): JSX.Element {
     rect.isCropRectangle = true;
 
     rect.on("scaling", (e) => {
-      const r = e.target as CropRect;
+  const r = e.transform?.target as CropRect | undefined;
+  if (!r) return;
 
-      if (selectedRatio !== null) {
-        const width = r.width * r.scaleX;
-        const newHeight = width / selectedRatio;
+  if (selectedRatio !== null) {
+    const width = r.width! * r.scaleX!;
+    const height = width / selectedRatio;
 
-        r.set({
-          height: newHeight / r.scaleY,
-        });
-      }
+    r.scaleY = height / r.height!;
+  }
+});
 
-      canvasEditor.requestRenderAll();
-    });
 
     canvasEditor.add(rect);
     canvasEditor.setActiveObject(rect);

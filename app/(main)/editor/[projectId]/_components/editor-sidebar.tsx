@@ -18,23 +18,31 @@ import TextControls from "./_tools/text";
 import AIExtendControls from "./_tools/ai-extend";
 import { AIEdit } from "./_tools/ai-edit";
 
-interface CanvasProps {
-  project: {
-    _id: Id<"projects">;
-    title: string;
-    currentImageUrl?: string;
-    originalImageUrl?: string;
-    createdAt: number;
-    updatedAt: number;
-    width: number;
-    height: number;
-    canvasState?: string;
-  };
+/* -------------------------------------
+   TYPES
+------------------------------------- */
+
+interface Project {
+  _id: Id<"projects">;
+  title: string;
+  currentImageUrl?: string;
+  originalImageUrl?: string;
+  createdAt: number;
+  updatedAt: number;
+  width: number;
+  height: number;
+  canvasState?: string;
+  activeTransformations?: any;
+}
+
+interface EditorSidebarProps {
+  project: Project;
 }
 
 /* -------------------------------------
-   TOOL CONFIGURATION (FULLY TYPED)
+   TOOL CONFIG
 ------------------------------------- */
+
 const TOOL_CONFIGS = {
   resize: {
     title: "Resize",
@@ -73,25 +81,25 @@ const TOOL_CONFIGS = {
   },
 } as const;
 
-// Infer union type: "resize" | "crop" | "text" | ...
 export type ToolId = keyof typeof TOOL_CONFIGS;
 
 /* -------------------------------------
    MAIN COMPONENT
 ------------------------------------- */
-const EditorSidebar = ({ project }: CanvasProps) => {
-  // Force type: activeTool is ToolId | null
-  const { activeTool } = useCanvas() as { activeTool: ToolId | null };
+
+const EditorSidebar = ({ project }: EditorSidebarProps) => {
+  const { activeTool } = useCanvas() as {
+    activeTool: ToolId | null;
+  };
 
   const toolConfig = activeTool ? TOOL_CONFIGS[activeTool] : null;
-
   if (!toolConfig) return null;
 
   const Icon = toolConfig.icon;
 
-   return (
+  return (
     <div className="min-w-96 border-r flex flex-col">
-      {/* Sidebar Header */}
+      {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center gap-3">
           <Icon className="h-5 w-5 text-white" />
@@ -99,10 +107,12 @@ const EditorSidebar = ({ project }: CanvasProps) => {
             {toolConfig.title}
           </h2>
         </div>
-        <p className="text-sm text-white mt-1">{toolConfig.description}</p>
+        <p className="text-sm text-white mt-1">
+          {toolConfig.description}
+        </p>
       </div>
 
-      {/* Sidebar Content */}
+      {/* Content */}
       <div className="flex-1 p-4 overflow-y-scroll">
         {renderToolContent(activeTool, project)}
       </div>
@@ -111,9 +121,20 @@ const EditorSidebar = ({ project }: CanvasProps) => {
 };
 
 /* -------------------------------------
-   TOOL RENDERER (FULLY TYPED)
+   TOOL RENDERER
 ------------------------------------- */
-function renderToolContent(activeTool: ToolId | null, project: CanvasProps["project"]) {
+
+function renderToolContent(
+  activeTool: ToolId | null,
+  project: Project
+) {
+  // Common props for canvas-aware tools
+  const canvasToolProps = {
+    project,
+    currentImageUrl: project.currentImageUrl,
+    originalImageUrl: project.originalImageUrl,
+  };
+
   switch (activeTool) {
     case "crop":
       return <CropContent />;
@@ -123,20 +144,25 @@ function renderToolContent(activeTool: ToolId | null, project: CanvasProps["proj
 
     case "adjust":
       return <AdjustControls />;
-    
+
     case "background":
-      return <BackgroundControls project={project} currentImageUrl={undefined} originalImageUrl={undefined}/>
+      return <BackgroundControls {...canvasToolProps} />;
 
     case "text":
-      return <TextControls />
+      return <TextControls />;
 
     case "ai_extender":
-      return <AIExtendControls  project={project} currentImageUrl={undefined} originalImageUrl={undefined}/>
+      return <AIExtendControls {...canvasToolProps} />;
+
     case "ai_edit":
-      return <AIEdit project={project} />
+      return <AIEdit {...canvasToolProps} />;
 
     default:
-      return <div className="text-white">Select a tool to get started</div>;
+      return (
+        <div className="text-white">
+          Select a tool to get started
+        </div>
+      );
   }
 }
 

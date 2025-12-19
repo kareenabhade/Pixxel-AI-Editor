@@ -57,7 +57,7 @@ interface CanvasProps {
   currentImageUrl: any;
   originalImageUrl: any;
   project: {
-    activeTransformations: any;
+    activeTransformations?: any;
     _id: Id<"projects">;
     title: string;
     currentImageUrl?: string;
